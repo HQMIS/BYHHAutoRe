@@ -114,10 +114,8 @@ def sleepTime():
     time.sleep(sleeptime)   
  
 if __name__ == '__main__':
-    #username = raw_input("UserName:")
-    #password = raw_input("PassWord:")
-    username = "HQM"
-    password = "4385663"
+    username = raw_input("UserName:")
+    password = raw_input("PassWord:")
 
     ### 登录白云黄鹤
     byhh = BYHH(username, password)
