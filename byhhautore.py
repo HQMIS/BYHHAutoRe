@@ -1,6 +1,6 @@
 #-*-coding:utf-8-*-
 
-# script: autoreply.py
+# script: byhhautore.py
 # author: huangqimin@baidu.com
 
 # note: 
@@ -74,13 +74,15 @@ class NEWSURL:
         _id = source.split("<textarea")[1].split("\n")[1].split(":")[1].split(",")[0]
         _content = source.split("<textarea")[1].split("--")[0].split("\n")[4:]
         for i in _content:
-            if "" == i or "\r" == i or i.startswith(":") or i.startswith("【".decode("utf8").encode("gb2312")):
+            if "" == i or "\r" == i or i.startswith(":") or i.startswith(hanzi("【")):
                 pass
             else:
-                _reply = i 
-        _content = [": "+line for line in _content]
+                _reply = i
+        ### 引用内容太多时， 保留7行
+        _content = _content[:7] if len(_content)>7 else _content
+        _content = [": "+line.strip() for line in _content]
         re_url = source.split("[<a href=")[3].split("id")[0][1:-2]
-        return _title, ["【 在 ".decode("utf8").encode("gb2312")+_id+ "的大作中提到: 】".decode("utf8").encode("gb2312"),]+_content, _reply, re_url
+        return _title, [hanzi("【 在 ")+_id+ hanzi("的大作中提到: 】"),]+_content, _reply.strip(), re_url
 
 class REPLY:
     def __init__(self):
@@ -111,11 +113,15 @@ def sleepTime():
     # 看到的是如果sleeptime时间为一个数，则被判为机器登录
     # 所以这里生成随机数来处理
     sleeptime = 15 + random.randint(0, 15)
-    time.sleep(sleeptime)   
+    time.sleep(sleeptime)
+
+def hanzi(hz):
+    # 将汉字转为gb2312编码格式
+    return hz.decode("utf8").encode("gb2312")
  
 if __name__ == '__main__':
-    username = raw_input("UserName:")
-    password = raw_input("PassWord:")
+    username = raw_input("UserName: ")
+    password = raw_input("PassWord: ")
 
     ### 登录白云黄鹤
     byhh = BYHH(username, password)
@@ -126,26 +132,29 @@ if __name__ == '__main__':
             ### 获取新鲜事列表页面，返回最后一个新鲜事Url
             news = NEWS()
             news_url = news.news(cookie)
-            print news_url
+            print hanzi("末新鲜事Url： "), news_url
 
             ### 获取新鲜事页面，返回标题、内容、以及回文章的Url
             newsurl = NEWSURL()
             title, content, _reply, re_url = newsurl.newsurl("http://byhh.net/cgi-bin/"+news_url, cookie)
-            print title
-            print content
-            print _reply
-            print re_url
+            print hanzi("原帖标题： "), title
+            print hanzi("引用文本： "), content
+            print hanzi("回帖内容： "), _reply
+            print hanzi("回帖页面Url： "), re_url
 
             ### 获取回帖页面，返回回帖接口，源码action后的Url
             reply = REPLY()
             bbssnd_url = reply.reply("http://byhh.net/cgi-bin/"+re_url, cookie)
-            print bbssnd_url
+            print hanzi("回帖接口： "), bbssnd_url
+
+            ### 生成回复内容，对于special words，会直接读取预设的内容进行回复，下面只是一个Demo(“男哥”)，其他的则去SimSimi获取
+            re_info = "".join(open("./SolarChimeny").readlines()) if _reply == hanzi("男哥") else hanzi(magic(_reply.decode("gb2312")))
+            ### 判断是否有敏感词，暂时没有添加，哈哈
             
-            ### 回帖，找的接口不对还是使用不对？回帖编程了发帖，好吧，把“Re”写成了“RE”
-            ### 像@wong2的小黄鸡一样，这里自动添加一些回复，"\n".join(content)
-            bbssnd = BBSSND("Re:"+title, magic(_reply.decode("gb2312")).decode("utf8").encode("gb2312")+"\n"+"\n".join(content))
+            ### 回帖
+            bbssnd = BBSSND("Re:"+title, re_info+"\n"+"\n".join(content))
             bbssnd.bbssnd("http://byhh.net/cgi-bin/"+bbssnd_url, cookie)
         except:
-            print "亲爱的".decode("utf8").encode("gb2312")+username+",  您暂时还没有新鲜事\n我先休息一会，等会再看看".decode("utf8").encode("gb2312")
+            print hanzi("亲爱的")+username+hanzi(",  您暂时还没有新鲜事\n我先休息一会，等会再看看\n")
         sleepTime()
 
