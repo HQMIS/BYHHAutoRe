@@ -14,6 +14,8 @@
 #     see http://developer.simsimi.com/
 # 3、 This Python Script can also use xiaoi:
 #     see http://i.xiaoi.com
+# 4、 GB2312对一些复杂汉字不支持：
+#     see https://gist.github.com/4468718
 
 import urllib
 import urllib2
