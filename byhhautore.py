@@ -20,7 +20,10 @@ import urllib2
 import cookielib
 import random
 import time
+import cPickle as pickle
+
 from ai import magic
+from wr import getweather
 
 class BYHH:
     def __init__(self, username, password):
@@ -59,7 +62,7 @@ class NEWS:
         req.add_header("Cookie", cookie)
         source = urllib2.urlopen(req).read()
         #print source
-        return source.split("<td width=36>")[-1].split("<a href=")[4].split("target")[0][1:-2]  
+        return source.split('<td width=76><a href="')[1].split('"')[0]
 
 class NEWSURL:
     def __init__(self):
@@ -118,7 +121,15 @@ def sleepTime():
 def hanzi(hz):
     # 将汉字转为gb2312编码格式
     return hz.decode("utf8").encode("gb2312")
- 
+
+def utf82gb2312(hz):
+    # 将unicode编码格式转换为gb2312编码格式
+    return hz.encode("gb2312")
+
+def utf82GBK(hz):
+    # 将unicode编码格式转换为GBK编码格式
+    return hz.encode("GBK")
+
 if __name__ == '__main__':
     username = raw_input("UserName: ")
     password = raw_input("PassWord: ")
@@ -127,12 +138,15 @@ if __name__ == '__main__':
     byhh = BYHH(username, password)
     cookie = byhh.login()
 
+    ### 加载城市名称和城市id
+    cityidDict = pickle.load(file('./cityid', 'r'))
+
     while True:
         try:
-            ### 获取新鲜事列表页面，返回最后一个新鲜事Url
+            ### 获取新鲜事列表页面，返回首个新鲜事Url
             news = NEWS()
             news_url = news.news(cookie)
-            print hanzi("末新鲜事Url： "), news_url
+            print hanzi("首新鲜事Url： "), news_url
 
             ### 获取新鲜事页面，返回标题、内容、以及回文章的Url
             newsurl = NEWSURL()
@@ -148,8 +162,27 @@ if __name__ == '__main__':
             print hanzi("回帖接口： "), bbssnd_url
 
             ### 生成回复内容，对于special words，会直接读取预设的内容进行回复，下面只是一个Demo(“男哥”)，其他的则去SimSimi获取
-            re_info = "".join(open("./SolarChimeny").readlines()) if _reply == hanzi("男哥") else hanzi(magic(_reply.decode("gb2312")))
-            ### 判断是否有敏感词，暂时没有添加，哈哈
+            if  hanzi("男哥") in _reply:
+                re_info = "".join(open("./SolarChimeny").readlines())
+            elif hanzi("天气") in _reply:
+                cityFlag = False
+                for city in cityidDict.keys():
+                    if utf82GBK(city) in _reply:
+                        re_info = hanzi(getweather(city.encode("utf8")))
+                        cityFlag = True
+                        break
+                if  not cityFlag:
+                    re_info = hanzi(getweather("武汉"))
+            else:
+                re_info = hanzi(magic(_reply.decode("gb2312")))
+            print re_info
+            
+            ### 判断是否有敏感词
+            if hanzi("呵呵") in re_info:
+                print hanzi("敏感词： 微信")
+                re_info = hanzi("昔人已乘黄鹤去，此地空余黄鹤楼。黄鹤一去不复返，白云千载空悠悠")
+            else:
+                pass
             
             ### 回帖
             bbssnd = BBSSND("Re:"+title, re_info+"\n"+"\n".join(content))
