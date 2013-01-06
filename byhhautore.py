@@ -60,8 +60,8 @@ class NEWS:
         pass
     
     def news(self, cookies):
-        req = urllib2.Request("http://byhh.net/cgi-bin/bbsnewsfeed")
-        req.add_header("Cookie", cookie)
+        req = urllib2.Request('http://byhh.net/cgi-bin/bbsnewsfeed')
+        req.add_header('Cookie', cookie)
         source = urllib2.urlopen(req).read()
         #print source
         return source.split('<td width=76><a href="')[1].split('"')[0]
@@ -72,22 +72,22 @@ class NEWSURL:
     
     def newsurl(self, url, cookies):
         req = urllib2.Request(url)
-        req.add_header("Cookie", cookie)
+        req.add_header('Cookie', cookie)
         source = urllib2.urlopen(req).read()
         #print source
-        _title = source.split("<textarea")[1].split("\n")[2].split(":")[-1]
-        _id = source.split("<textarea")[1].split("\n")[1].split(":")[1].split(",")[0]
-        _content = source.split("<textarea")[1].split("--")[0].split("\n")[4:]
+        _title = source.split('<textarea')[1].split('\n')[2].split(':')[-1]
+        _id = source.split('<textarea')[1].split('\n')[1].split(':')[1].split(',')[0]
+        _content = source.split('<textarea')[1].split('--')[0].split('\n')[4:]
         for i in _content:
-            if "" == i or "\r" == i or i.startswith(":") or i.startswith(hanzi("【")):
+            if "" == i or '\r' == i or i.startswith(':') or i.startswith(hanzi('【')):
                 pass
             else:
                 _reply = i
-        ### 引用内容太多时， 保留7行
+        # 引用内容太多时， 保留7行
         _content = _content[:7] if len(_content)>7 else _content
-        _content = [": "+line.strip() for line in _content]
-        re_url = source.split("[<a href=")[3].split("id")[0][1:-2]
-        return _title, [hanzi("【 在 ")+_id+ hanzi("的大作中提到: 】"),]+_content, _reply.strip(), re_url
+        _content = [': '+line.strip() for line in _content]
+        re_url = source.split('[<a href=')[3].split('id')[0][1:-2]
+        return _title, [hanzi('【 在 ')+_id+ hanzi('的大作中提到: 】'),]+_content, _reply.strip(), re_url
 
 class REPLY:
     def __init__(self):
@@ -95,10 +95,10 @@ class REPLY:
     
     def reply(self, url, cookies):
         req = urllib2.Request(url)
-        req.add_header("Cookie", cookie)
+        req.add_header('Cookie', cookie)
         source = urllib2.urlopen(req).read()
         #print source
-        return source.split("action")[1].split(">")[0][2:-1]
+        return source.split('action')[1].split('>')[0][2:-1]
         
 class BBSSND:
     def __init__(self, title, text, signature=1, start=7762):
@@ -110,7 +110,7 @@ class BBSSND:
     def bbssnd(self, url, cookies):
         params = {'title': self.title, 'signature':self.signature, 'start':self.start, 'text': self.text}
         req = urllib2.Request(url, urllib.urlencode(params))
-        req.add_header("Cookie", cookie)
+        req.add_header('Cookie', cookie)
         print urllib2.urlopen(req).read()
 
 def sleepTime():
@@ -122,74 +122,90 @@ def sleepTime():
 
 def hanzi(hz):
     # 将汉字转为gb2312编码格式
-    return hz.decode("utf8").encode("gb2312")
+    return hz.decode('utf8').encode('GBK')
 
 def utf82gb2312(hz):
     # 将unicode编码格式转换为gb2312编码格式
-    return hz.encode("gb2312")
+    return hz.encode('GBK')
 
 def utf82GBK(hz):
     # 将unicode编码格式转换为GBK编码格式
-    return hz.encode("GBK")
+    return hz.encode('GBK')
+
+def specialWords(swList, _reply):
+    for sw in swList:
+        if sw in _reply:
+            return True, sw
+    return False, 'sw'
 
 if __name__ == '__main__':
-    username = raw_input("UserName: ")
-    password = raw_input("PassWord: ")
+    username = raw_input('UserName: ')
+    password = raw_input('PassWord: ')
 
-    ### 登录白云黄鹤
+    # 登录白云黄鹤
     byhh = BYHH(username, password)
     cookie = byhh.login()
 
-    ### 加载城市名称和城市id
+    # 加载城市名称和城市id
     cityidDict = pickle.load(file('./cityid', 'r'))
+    # 加载SpecialWords列表
+    specialWordsList = open('./SpecialWords', 'r').readline().split(';')
+    specialWordsDict = {}
+    for sw in specialWordsList:
+        specialWordsDict[sw.split(':')[0]] = sw.split(':')[1]
+    # 加载SpecialWords列表
+    sensitiveWordsList = open('./SensitiveWords', 'r').readline().split(';')
 
     while True:
         try:
-            ### 获取新鲜事列表页面，返回首个新鲜事Url
+            # 获取新鲜事列表页面，返回首个新鲜事Url
             news = NEWS()
             news_url = news.news(cookie)
-            print hanzi("首新鲜事Url： "), news_url
+            print hanzi('首新鲜事Url： '), news_url
 
-            ### 获取新鲜事页面，返回标题、内容、以及回文章的Url
+            # 获取新鲜事页面，返回标题、内容、以及回文章的Url
             newsurl = NEWSURL()
-            title, content, _reply, re_url = newsurl.newsurl("http://byhh.net/cgi-bin/"+news_url, cookie)
-            print hanzi("原帖标题： "), title
-            print hanzi("引用文本： "), content
-            print hanzi("回帖内容： "), _reply
-            print hanzi("回帖页面Url： "), re_url
+            title, content, _reply, re_url = newsurl.newsurl('http://byhh.net/cgi-bin/'+news_url, cookie)
+            print hanzi('原帖标题： '), title
+            print hanzi('引用文本： '), content
+            print hanzi('回帖内容： '), _reply
+            print hanzi('回帖页面Url： '), re_url
 
-            ### 获取回帖页面，返回回帖接口，源码action后的Url
+            # 获取回帖页面，返回回帖接口，源码action后的Url
             reply = REPLY()
-            bbssnd_url = reply.reply("http://byhh.net/cgi-bin/"+re_url, cookie)
-            print hanzi("回帖接口： "), bbssnd_url
+            bbssnd_url = reply.reply('http://byhh.net/cgi-bin/'+re_url, cookie)
+            print hanzi('回帖接口： '), bbssnd_url
 
-            ### 生成回复内容，对于special words，会直接读取预设的内容进行回复，下面只是一个Demo(“男哥”)，其他的则去SimSimi获取
-            if  hanzi("男哥") in _reply:
-                re_info = "".join(open("./SolarChimeny").readlines())
-            elif hanzi("天气") in _reply:
+            # 生成回复内容
+            # 对于special words，会直接读取预设的内容进行回复
+            tf, sw = specialWords(specialWordsDict.keys(), _reply)
+            if  tf:
+                re_info = "".join(open('./'+specialWordsDict[sw]).readlines())
+            elif hanzi('天气') in _reply:
                 cityFlag = False
                 for city in cityidDict.keys():
                     if utf82GBK(city) in _reply:
-                        re_info = hanzi(getweather(city.encode("utf8")))
+                        re_info = hanzi(getweather(city.encode('utf8')))
                         cityFlag = True
                         break
                 if  not cityFlag:
-                    re_info = hanzi(getweather("武汉"))
-            else:
-                re_info = hanzi(magic(_reply.decode("gb2312")))
+                    re_info = hanzi(getweather('武汉'))
+            else: # SimSimi获取
+                re_info = hanzi(magic(_reply.decode('gb2312')))
             print re_info
             
-            ### 判断是否有敏感词
-            if hanzi("呵呵") in re_info:
-                print hanzi("敏感词： 微信")
-                re_info = hanzi("昔人已乘黄鹤去，此地空余黄鹤楼。黄鹤一去不复返，白云千载空悠悠")
+            # 判断是否有敏感词
+            tf, sw = specialWords(sensitiveWordsList, re_info)
+            if tf:
+                print hanzi('敏感词： '), sw
+                re_info = hanzi('昔人已乘黄鹤去，此地空余黄鹤楼。黄鹤一去不复返，白云千载空悠悠')
             else:
                 pass
             
-            ### 回帖
-            bbssnd = BBSSND("Re:"+title, re_info+"\n"+"\n".join(content))
-            bbssnd.bbssnd("http://byhh.net/cgi-bin/"+bbssnd_url, cookie)
+            # 回帖
+            bbssnd = BBSSND('Re:'+title, re_info+'\n'+'\n'.join(content))
+            bbssnd.bbssnd('http://byhh.net/cgi-bin/'+bbssnd_url, cookie)
         except:
-            print hanzi("亲爱的")+username+hanzi(",  您暂时还没有新鲜事\n我先休息一会，等会再看看\n")
+            print hanzi('亲爱的')+username+hanzi(',  您暂时还没有新鲜事\n我先休息一会，等会再看看\n')
         sleepTime()
 
