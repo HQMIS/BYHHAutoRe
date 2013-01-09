@@ -24,126 +24,14 @@
 #     Add retry for each class...
 # 3、
 
-import urllib
-import urllib2
-import cookielib
-import random
 import time
+import random
 import cPickle as pickle
 
+from byhh import BYHH, NEWS, NEWSURL, REPLY, BBSSND
 from ai import magic
 from wr import getweather
 
-class BYHH:
-    def __init__(self, username, password):
-        self.id = username
-        self.pw = password
- 
-    def login(self):
-        cj = cookielib.LWPCookieJar()
-        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
-        urllib2.install_opener(opener)
-
-        params = {'id': self.id, 'pw': self.pw}
-        req = urllib2.Request('http://bbs.whnet.edu.cn/cgi-bin/bbslogin', urllib.urlencode(params))
-        source = opener.open(req).read()
-
-        msg = []
-        for i in range(0, 10):
-            first = source.find("'")
-            source = source.replace("'", '"', 1)
-            second = source.find("\'")
-            source = source.replace("\'", '"', 1)
-            msg.append(source[first+1:second])   
-
-        cookie = ""
-        for i in range(3, 10):
-            cookie = cookie + msg[i] + ";"
-
-        return cookie
-
-class NEWS:
-    def __init__(self):
-        pass
-    
-    def _news(self, cookies):
-        req = urllib2.Request('http://byhh.net/cgi-bin/bbsnewsfeed')
-        req.add_header('Cookie', cookie)
-        source = urllib2.urlopen(req).read()
-        #print source
-        return source.split('<td width=76><a href="')[1].split('"')[0]
-    
-    def news(self, cookies):
-        try:
-            return self._news(cookies)
-        except:
-            return 0
-    
-class NEWSURL:
-    def __init__(self):
-        pass
-    
-    def _newsurl(self, url, cookies):
-        req = urllib2.Request(url)
-        req.add_header('Cookie', cookie)
-        source = urllib2.urlopen(req).read()
-        #print source
-        _title = source.split('<textarea')[1].split('\n')[2].split(':')[-1]
-        _id = source.split('<textarea')[1].split('\n')[1].split(':')[1].split(',')[0]
-        _content = source.split('<textarea')[1].split('--')[0].split('\n')[4:]
-        for i in _content:
-            if "" == i or '\r' == i or i.startswith(':') or i.startswith(hanzi('【')):
-                pass
-            else:
-                _reply = i
-        # 引用内容太多时， 保留7行
-        _content = _content[:7] if len(_content)>7 else _content
-        _content = [': '+line.strip() for line in _content]
-        re_url = source.split('[<a href=')[3].split('id')[0][1:-2]
-        return _title, [hanzi('【 在 ')+_id+ hanzi('的大作中提到: 】'),]+_content, _reply.strip(), re_url
-
-    def newsurl(self, url, cookies):
-        try:
-            return self._newsurl(url, cookies)
-        except:
-            return self.newsurl(url, cookies)
-        
-class REPLY:
-    def __init__(self):
-        pass
-    
-    def _reply(self, url, cookies):
-        req = urllib2.Request(url)
-        req.add_header('Cookie', cookie)
-        source = urllib2.urlopen(req).read()
-        #print source
-        return source.split('action')[1].split('>')[0][2:-1]
-
-    def reply(self, url, cookies):
-        try:
-            return self._reply(url, cookies)
-        except:
-            return self.reply(url, cookies)        
-        
-class BBSSND:
-    def __init__(self, title, text, signature=1, start=7762):
-        self.title = title
-        self.text = text
-        self.signature = signature
-        self.start = start
- 
-    def _bbssnd(self, url, cookies):
-        params = {'title': self.title, 'signature':self.signature, 'start':self.start, 'text': self.text}
-        req = urllib2.Request(url, urllib.urlencode(params))
-        req.add_header('Cookie', cookie)
-        print urllib2.urlopen(req).read()
-
-    def bbssnd(self, url, cookies):
-        try:
-            return self._bbssnd(url, cookies)
-        except:
-            return self.bbssnd(url, cookies)      
-        
 def sleepTime():
     # BYHH会检测，是否为机器登录
     # 看到的是如果sleeptime时间为一个数，则被判为机器登录
@@ -170,6 +58,7 @@ if __name__ == '__main__':
     # 登录白云黄鹤
     byhh = BYHH(username, password)
     cookie = byhh.login()
+    print cookie
 
     # 加载城市名称和城市id
     cityidDict = pickle.load(file('./cityid', 'r'))
@@ -186,6 +75,7 @@ if __name__ == '__main__':
         # 获取新鲜事列表页面，返回首个新鲜事Url
         news = NEWS()
         news_url = news.news(cookie)
+        print news_url
         if 0 == news_url:
             print hanzi('亲爱的')+username+hanzi(',  您暂时还没有新鲜事\n我先休息一会，等会再看看\n')
         else:
