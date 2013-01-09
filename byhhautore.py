@@ -9,13 +9,20 @@
 #    see http://docs.python.org/2/library/urllib.html
 #    see http://docs.python.org/2/library/cookielib.html
 # 2、This Python Script use SimSimi:
-#     see https://github.com/wong2/renren-bot
+#     see https://github.com/wong2/xiaohuangji
 #     see http://www.simsimi.com/talk.htm?lc=ch
 #     see http://developer.simsimi.com/
 # 3、 This Python Script can also use xiaoi:
 #     see http://i.xiaoi.com
-# 4、 GB2312对一些复杂汉字不支持：
+
+# Questions && Solutions
+# 1、 GB2312对一些复杂汉字不支持：
 #     see https://gist.github.com/4468718
+# 2、 At times, response is not succeed:
+#     Swallow post, to find the reason, and solve it...
+#     Change character encoding GB18030...
+#     Add retry for each class...
+# 3、
 
 import urllib
 import urllib2
@@ -59,18 +66,24 @@ class NEWS:
     def __init__(self):
         pass
     
-    def news(self, cookies):
+    def _news(self, cookies):
         req = urllib2.Request('http://byhh.net/cgi-bin/bbsnewsfeed')
         req.add_header('Cookie', cookie)
         source = urllib2.urlopen(req).read()
         #print source
         return source.split('<td width=76><a href="')[1].split('"')[0]
-
+    
+    def news(self, cookies):
+        try:
+            return self._news(cookies)
+        except:
+            return 0
+    
 class NEWSURL:
     def __init__(self):
         pass
     
-    def newsurl(self, url, cookies):
+    def _newsurl(self, url, cookies):
         req = urllib2.Request(url)
         req.add_header('Cookie', cookie)
         source = urllib2.urlopen(req).read()
@@ -89,16 +102,28 @@ class NEWSURL:
         re_url = source.split('[<a href=')[3].split('id')[0][1:-2]
         return _title, [hanzi('【 在 ')+_id+ hanzi('的大作中提到: 】'),]+_content, _reply.strip(), re_url
 
+    def newsurl(self, url, cookies):
+        try:
+            return self._newsurl(url, cookies)
+        except:
+            return self.newsurl(url, cookies)
+        
 class REPLY:
     def __init__(self):
         pass
     
-    def reply(self, url, cookies):
+    def _reply(self, url, cookies):
         req = urllib2.Request(url)
         req.add_header('Cookie', cookie)
         source = urllib2.urlopen(req).read()
         #print source
         return source.split('action')[1].split('>')[0][2:-1]
+
+    def reply(self, url, cookies):
+        try:
+            return self._reply(url, cookies)
+        except:
+            return self.reply(url, cookies)        
         
 class BBSSND:
     def __init__(self, title, text, signature=1, start=7762):
@@ -107,12 +132,18 @@ class BBSSND:
         self.signature = signature
         self.start = start
  
-    def bbssnd(self, url, cookies):
+    def _bbssnd(self, url, cookies):
         params = {'title': self.title, 'signature':self.signature, 'start':self.start, 'text': self.text}
         req = urllib2.Request(url, urllib.urlencode(params))
         req.add_header('Cookie', cookie)
         print urllib2.urlopen(req).read()
 
+    def bbssnd(self, url, cookies):
+        try:
+            return self._bbssnd(url, cookies)
+        except:
+            return self.bbssnd(url, cookies)      
+        
 def sleepTime():
     # BYHH会检测，是否为机器登录
     # 看到的是如果sleeptime时间为一个数，则被判为机器登录
@@ -121,16 +152,10 @@ def sleepTime():
     time.sleep(sleeptime)
 
 def hanzi(hz):
-    # 将汉字转为gb2312编码格式
-    return hz.decode('utf8').encode('GBK')
+    return hz.decode('utf8').encode('GB18030')
 
-def utf82gb2312(hz):
-    # 将unicode编码格式转换为gb2312编码格式
-    return hz.encode('GBK')
-
-def utf82GBK(hz):
-    # 将unicode编码格式转换为GBK编码格式
-    return hz.encode('GBK')
+def unicode2GB18030(hz):
+    return hz.encode('GB18030')
 
 def specialWords(swList, _reply):
     for sw in swList:
@@ -153,14 +178,17 @@ if __name__ == '__main__':
     specialWordsDict = {}
     for sw in specialWordsList:
         specialWordsDict[sw.split(':')[0]] = sw.split(':')[1]
-    # 加载SpecialWords列表
+    
+    # 加载SpecialWords列表
     sensitiveWordsList = open('./SensitiveWords', 'r').readline().split(';')
 
     while True:
-        try:
-            # 获取新鲜事列表页面，返回首个新鲜事Url
-            news = NEWS()
-            news_url = news.news(cookie)
+        # 获取新鲜事列表页面，返回首个新鲜事Url
+        news = NEWS()
+        news_url = news.news(cookie)
+        if 0 == news_url:
+            print hanzi('亲爱的')+username+hanzi(',  您暂时还没有新鲜事\n我先休息一会，等会再看看\n')
+        else:
             print hanzi('首新鲜事Url： '), news_url
 
             # 获取新鲜事页面，返回标题、内容、以及回文章的Url
@@ -184,14 +212,14 @@ if __name__ == '__main__':
             elif hanzi('天气') in _reply:
                 cityFlag = False
                 for city in cityidDict.keys():
-                    if utf82GBK(city) in _reply:
+                    if unicode2GB18030(city) in _reply:
                         re_info = hanzi(getweather(city.encode('utf8')))
                         cityFlag = True
                         break
                 if  not cityFlag:
                     re_info = hanzi(getweather('武汉'))
             else: # SimSimi获取
-                re_info = hanzi(magic(_reply.decode('gb2312')))
+                re_info = hanzi(magic(_reply.decode('GB18030')))
             print re_info
             
             # 判断是否有敏感词
@@ -205,7 +233,5 @@ if __name__ == '__main__':
             # 回帖
             bbssnd = BBSSND('Re:'+title, re_info+'\n'+'\n'.join(content))
             bbssnd.bbssnd('http://byhh.net/cgi-bin/'+bbssnd_url, cookie)
-        except:
-            print hanzi('亲爱的')+username+hanzi(',  您暂时还没有新鲜事\n我先休息一会，等会再看看\n')
         sleepTime()
 

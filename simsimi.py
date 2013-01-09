@@ -18,10 +18,9 @@ class SimSimi:
         if message.strip():
             r = self.session.get(self.url % message.strip(), headers=self.headers)
             try:
-                print r.json()['response']
                 return r.json()['response']
             except:
-                return u'呵呵'
+                return u'法海你不懂爱，雷峰塔会倒下来'
         else:
             return u'叫我干嘛'
  
