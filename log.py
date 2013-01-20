@@ -1,7 +1,8 @@
+#!/usr/bin/env python
 #-*-coding:utf-8-*-
 
 """
-Copyright (c) 2012 wong2 <wonderfuly@gmail.com>
+Copyright (c) 2013 Qimin Huang <qiminis0801@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -24,19 +25,33 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 """
 
 
+# note:
+# 1、This Python Script is  Function for log
+
+
+import os
 import time
-from simsimi import SimSimi
+import logging
 
 
-print 'initing simi...'
-simi = SimSimi()
-print 'simi is online'
+class LOG:
+    def __init__(self):
+        self.logger = logging.getLogger()
+        self.handler = logging.FileHandler(os.path.join(os.path.dirname(__file__), 'log.txt'))
+        if 0 == len(self.logger.handlers):
+            self.logger.addHandler(self.handler)
+        else:
+            pass
+        self.logger.setLevel(logging.NOTSET)
 
+    def i(self, info):  # info
+        self.logger.info(os.linesep.join(['INFO: ', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())), info]) + os.linesep)
 
-# some magic here
-def magic(text):
-    return simi.chat(text).encode('utf-8')
+    def e(self, error):  # error
+        self.logger.error(os.linesep.join(['ERROE: ', time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())), error]) + os.linesep)
 
 
 if __name__ == '__main__':
-    print magic('最后一个问题')
+    log = LOG()
+    log.i('This is test for info')
+    log.e('This is test for error')
