@@ -58,9 +58,12 @@ from ai import magic
 from wr import getweather
 from log import LOG
 
+import requests
+
 
 log = LOG()
-cwd = os.path.dirname(__file__) + os.path.sep
+#cwd = os.path.dirname(__file__) + os.path.sep
+cwd = './'
 
 
 def sleepTime():
@@ -84,6 +87,22 @@ def specialWords(swList, _reply):
         if sw in _reply:
             return True, sw
     return False, 'sw'
+
+
+def analyseResponse(msg, first):
+    return msg.split(first.decode('utf8'))[1].split('<br><font'.decode('utf8'))[0].encode('utf8')
+
+
+def keyword_getResponse(kwid, appid):
+    url = 'http://www.unidust.cn/search.do?type=web&appid='
+    msg = requests.post(url + appid).text
+    try:
+        return analyseResponse(msg, '</font><br>')
+    except:
+        if 1 == kwid:
+            return analyseResponse(msg, '可看笑话分类<br>')
+        if 3 == kwid:
+            return analyseResponse(msg, '<br></font>')
 
 
 if __name__ == '__main__':
@@ -139,7 +158,7 @@ if __name__ == '__main__':
             # 对于special words，会直接读取预设的内容进行回复
             tf, sw = specialWords(specialWordsDict.keys(), _reply)
             if  tf:
-                re_info = "".join(open('./' + specialWordsDict[sw]).readlines())
+                re_info = "".join(open(cwd + specialWordsDict[sw]).readlines())
             elif hanzi('天气') in _reply:
                 cityFlag = False
                 for city in cityidDict.keys():
@@ -149,8 +168,12 @@ if __name__ == '__main__':
                         break
                 if  not cityFlag:
                     re_info = hanzi(getweather('武汉'))
-            elif hanzi('笑话') in _reply:
-                pass
+                else:
+                    pass
+            elif hanzi('笑话') in _reply or hanzi('讲笑话') in _reply or hanzi('讲个笑话') in _reply:
+                re_info = hanzi(keyword_getResponse(1, '61'))
+            elif hanzi('故事') in _reply or hanzi('讲故事') in _reply or hanzi('讲个故事') in _reply:
+                re_info = hanzi(keyword_getResponse(2, '381'))
             else:  # SimSimi获取
                 re_info = hanzi(magic(_reply.decode('GB18030')))
             log.i(re_info)
